@@ -1,0 +1,15 @@
+# --- NEXUS-CORE DEPENDENCIES ---
+
+# Core API Requests
+requests>=2.31.0
+
+# Agentic Orchestration (The Brain)
+langgraph>=0.0.15
+langchain>=0.1.0
+
+# Visualization & Simulation
+matplotlib>=3.8.0
+numpy>=1.26.0
+
+# Environment Management
+python-dotenv>=1.0.0

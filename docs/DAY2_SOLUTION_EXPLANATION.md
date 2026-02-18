@@ -106,6 +106,11 @@ Two visual outputs are generated:
 
 This provides interpretability and transparency in routing decisions.
 
+## 📊 Day 2 Optimal Route Visualization
+
+![Day 2 Optimal Route](../images/day2_optimal_route.png)
+
+
 ---
 
 ## 🔥 6. Key Innovation

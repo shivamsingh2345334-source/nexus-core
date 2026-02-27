@@ -6,3 +6,18 @@
 - Vectorized Node Simulation
 - Industrial Logging
 - Modular Production Structure
+
+
+
+--------------------------
+
+
+
+#NEXUS DAY-2
+
+# Changelog
+- Modularized architecture
+- Added SwarmRouter
+- Implemented Hybrid Cost Model
+- Added visualization layer
+- Production logging integrated

@@ -1,191 +1,201 @@
-"""
-NEXUS-CORE LOGISTICS INTELLIGENCE SYSTEM
-Day 2 – Hybrid Risk Engine + Multi-Agent Swarm Optimization
-
-Features:
-- 20 City Logistics Network
-- Hybrid Risk Engine (Weather + Traffic)
-- Multi-Agent Debate (LangGraph)
-- Route Optimization using NetworkX
-- Visualization of Optimal Route
-"""
-
-# ================================
-# IMPORTS
-# ================================
-
-import networkx as nx
+import asyncio
+import os
 import random
+import logging
+import sys
+
+import numpy as np
+import networkx as nx
 import matplotlib.pyplot as plt
 from langgraph.graph import StateGraph
 
 
-# ================================
-# STEP 1: CREATE LOGISTICS NETWORK
-# ================================
+# ============================================================
+# 🔧 CONFIGURATION LAYER
+# ============================================================
 
-G = nx.Graph()
-
-# Create 20 City Nodes
-cities = [f"City-{i}" for i in range(1, 21)]
-G.add_nodes_from(cities)
-
-# Add Random Routes (Edges)
-for _ in range(45):
-    city_a, city_b = random.sample(cities, 2)
-    distance = random.randint(50, 500)  # Distance in km
-    G.add_edge(city_a, city_b, distance=distance)
-
-print("🔥 Logistics Graph Ready")
-print("Total Cities:", len(G.nodes))
-print("Total Routes:", len(G.edges))
+class NexusConfig:
+    ENV = os.getenv("NEXUS_ENV", "PRODUCTION")
+    NODE_COUNT = int(os.getenv("NODE_COUNT", 20))
+    TARGET_SCALE = 1_000_000_000_000
+    EDGE_PROBABILITY = 0.25
+    LOG_LEVEL = logging.INFO
 
 
-# ================================
-# STEP 2: HYBRID RISK ENGINE
-# ================================
-
-def risk_penalty():
-    """
-    Hybrid Risk Model:
-    - Weather Delay (0–30%)
-    - Traffic Delay (0–20%)
-    """
-    weather_delay = random.uniform(0, 0.3)
-    traffic_delay = random.uniform(0, 0.2)
-    return weather_delay + traffic_delay
+logging.basicConfig(
+    level=NexusConfig.LOG_LEVEL,
+    format="%(asctime)s | %(levelname)s | NEXUS-CORE | %(message)s",
+    stream=sys.stdout,
+)
+logger = logging.getLogger("Nexus-Core")
 
 
-# Apply Risk to Each Route
-for u, v in G.edges():
-    base_distance = G[u][v]["distance"]
-    penalty = risk_penalty()
-    G[u][v]["cost"] = base_distance * (1 + penalty)
+# ============================================================
+# 🏛 SOVEREIGN MESH ENGINE
+# ============================================================
 
-print("⚡ Hybrid Risk Model Applied (Weather + Traffic)")
+class SovereignMesh:
+    """Resilient self-healing routing mesh"""
+
+    def __init__(self):
+        self.G = nx.Graph()
+        self.cities = [
+            f"City-{i}" for i in range(1, NexusConfig.NODE_COUNT + 1)
+        ]
+        self._initialize_resilient_graph()
+
+    def _initialize_resilient_graph(self):
+        try:
+            self.G = nx.fast_gnp_random_graph(
+                NexusConfig.NODE_COUNT,
+                NexusConfig.EDGE_PROBABILITY,
+            )
+
+            mapping = {i: self.cities[i] for i in range(len(self.cities))}
+            self.G = nx.relabel_nodes(self.G, mapping)
+
+            # 🔁 Auto-Healing Connectivity
+            if not nx.is_connected(self.G):
+                logger.warning("Disconnected mesh detected. Healing...")
+                components = list(nx.connected_components(self.G))
+                for i in range(len(components) - 1):
+                    u = list(components[i])[0]
+                    v = list(components[i + 1])[0]
+                    self.G.add_edge(u, v)
+
+            # 💰 Hybrid Cost Injection
+            for u, v in self.G.edges():
+                distance = np.random.randint(50, 500)
+                risk = np.random.uniform(0.05, 0.5)
+                self.G[u][v]["distance"] = distance
+                self.G[u][v]["cost"] = distance * (1 + risk)
+
+            logger.info(
+                f"Mesh Ready: {len(self.G.nodes)} cities | {len(self.G.edges)} routes"
+            )
+
+        except Exception as e:
+            logger.critical(f"Mesh Initialization Failure: {e}")
+            raise
 
 
-# ================================
-# STEP 3: VISUALIZE NETWORK
-# ================================
+# ============================================================
+# 🧠 AGENTIC SWARM ROUTER
+# ============================================================
 
-plt.figure(figsize=(10, 7))
-pos = nx.spring_layout(G, seed=42)
-nx.draw(G, pos, node_size=300, with_labels=True)
-plt.title("🌍 Nexus-Core Logistics Network (Day 2)")
-plt.show()
+class SwarmRouter:
+    """Async multi-agent routing workflow"""
+
+    def __init__(self, mesh: SovereignMesh):
+        self.mesh = mesh
+        self.workflow = self._compile_swarm()
+
+    def _compile_swarm(self):
+
+        def analyst(state):
+            state["debate"].append(
+                f"Analyst validated topology for {state['source']}"
+            )
+            return state
+
+        def optimizer(state):
+            try:
+                path = nx.shortest_path(
+                    self.mesh.G,
+                    state["source"],
+                    state["target"],
+                    weight="cost",
+                )
+
+                total_cost = sum(
+                    self.mesh.G[path[i]][path[i + 1]]["cost"]
+                    for i in range(len(path) - 1)
+                )
+
+                state["best_path"] = path
+                state["total_cost"] = total_cost
+                state["debate"].append(
+                    f"Optimizer locked route | Cost: {total_cost:.2f}"
+                )
+
+            except Exception as e:
+                logger.error(f"Routing failure: {e}")
+                state["best_path"] = None
+                state["total_cost"] = 0
+
+            return state
+
+        builder = StateGraph(dict)
+        builder.add_node("Analyst", analyst)
+        builder.add_node("Optimizer", optimizer)
+        builder.set_entry_point("Analyst")
+        builder.add_edge("Analyst", "Optimizer")
+
+        return builder.compile()
 
 
-# ================================
-# STEP 4: MULTI-AGENT SWARM SYSTEM
-# ================================
+# ============================================================
+# 📊 VISUALIZATION
+# ============================================================
 
-def analyst_agent(state):
-    state["debate"].append(
-        f"📊 Analyst: Evaluating routes from {state['source']} → {state['target']}"
+def visualize(mesh, result, source, target):
+    plt.figure(figsize=(10, 7))
+    pos = nx.spring_layout(mesh.G, seed=42)
+
+    nx.draw(
+        mesh.G,
+        pos,
+        with_labels=True,
+        node_size=500,
+        node_color="skyblue",
+        font_weight="bold",
     )
-    return state
+
+    if result["best_path"]:
+        edges = list(zip(result["best_path"], result["best_path"][1:]))
+        nx.draw_networkx_edges(
+            mesh.G, pos, edgelist=edges, width=4, edge_color="red"
+        )
+
+    plt.title(f"Nexus Optimal Route: {source} → {target}")
+    plt.show()
 
 
-def risk_agent(state):
-    state["debate"].append(
-        "⚠️ Risk Agent: Weather and Traffic delays incorporated into cost."
+# ============================================================
+# 🚀 EXECUTION ENTRYPOINT
+# ============================================================
+
+async def main():
+    mesh = SovereignMesh()
+    router = SwarmRouter(mesh)
+
+    source, target = random.sample(mesh.cities, 2)
+
+    logger.info(f"Routing request: {source} → {target}")
+
+    result = await router.workflow.ainvoke(
+        {
+            "source": source,
+            "target": target,
+            "debate": [],
+        }
     )
-    return state
 
-
-def strategist_agent(state):
-    state["debate"].append(
-        "🧠 Strategist: Selecting route with minimum hybrid cost."
+    print("\n" + "=" * 60)
+    print("🏛 NEXUS-CORE PRODUCTION REPORT")
+    print("=" * 60)
+    print(f"Target Scale : {NexusConfig.TARGET_SCALE}")
+    print(
+        f"Optimal Path : {' → '.join(result['best_path']) if result['best_path'] else 'None'}"
     )
-    return state
+    print(f"Hybrid Cost  : {result['total_cost']:.2f}")
+    print("=" * 60 + "\n")
+
+    visualize(mesh, result, source, target)
 
 
-def optimizer_agent(state):
-    source = state["source"]
-    target = state["target"]
+if __name__ == "__main__":
+    import nest_asyncio
 
-    # Compute shortest path using hybrid cost
-    path = nx.shortest_path(G, source, target, weight="cost")
-
-    total_cost = sum(
-        G[path[i]][path[i + 1]]["cost"]
-        for i in range(len(path) - 1)
-    )
-
-    state["best_path"] = path
-    state["total_cost"] = total_cost
-
-    state["debate"].append(
-        f"✅ Optimizer: Best Route = {path} | Total Cost = {total_cost:.2f}"
-    )
-    return state
-
-
-# ================================
-# STEP 5: BUILD SWARM WORKFLOW
-# ================================
-
-workflow = StateGraph(dict)
-
-workflow.add_node("Analyst", analyst_agent)
-workflow.add_node("Risk", risk_agent)
-workflow.add_node("Strategist", strategist_agent)
-workflow.add_node("Optimizer", optimizer_agent)
-
-workflow.set_entry_point("Analyst")
-
-workflow.add_edge("Analyst", "Risk")
-workflow.add_edge("Risk", "Strategist")
-workflow.add_edge("Strategist", "Optimizer")
-
-swarm_app = workflow.compile()
-
-print("🔥 Nexus Swarm Ready (Day 2)")
-
-
-# ================================
-# STEP 6: EXECUTE ROUTE DECISION
-# ================================
-
-source, target = random.sample(cities, 2)
-
-state = {
-    "source": source,
-    "target": target,
-    "debate": []
-}
-
-result = swarm_app.invoke(state)
-
-print("\n==============================")
-print("🏛️ NEXUS-CORE ROUTING DECISION")
-print("==============================\n")
-
-print("SOURCE:", source)
-print("TARGET:", target)
-
-print("\n--- AGENT DEBATE LOG ---\n")
-for log in result["debate"]:
-    print(log)
-
-print("\n--- FINAL OPTIMAL ROUTE ---\n")
-print("Best Path:", result["best_path"])
-print("Total Hybrid Cost:", round(result["total_cost"], 2))
-
-
-# ================================
-# STEP 7: HIGHLIGHT OPTIMAL ROUTE
-# ================================
-
-best_path = result["best_path"]
-
-plt.figure(figsize=(10, 7))
-nx.draw(G, pos, node_size=250, with_labels=True)
-
-highlight_edges = list(zip(best_path, best_path[1:]))
-nx.draw_networkx_edges(G, pos, edgelist=highlight_edges, width=4)
-
-plt.title("🔥 Nexus-Core Optimal Route (Day 2)")
-plt.show()
-
+    nest_asyncio.apply()
+    asyncio.run(main())

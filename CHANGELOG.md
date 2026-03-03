@@ -13,11 +13,23 @@
 
 
 
-#NEXUS DAY-2
+#v.2.0 -DAY 2 
 
-# Changelog
+# Added
 - Modularized architecture
 - Added SwarmRouter
 - Implemented Hybrid Cost Model
 - Added visualization layer
 - Production logging integrated
+
+-------------------------------------
+
+#v.3.0  -DAY 3
+
+# Added
+
+- Modularized architecture
+- Added adaptive weight learning
+- Introduced swarm-based workflow
+- Implemented telemetry logging
+- Added visualization dashboard

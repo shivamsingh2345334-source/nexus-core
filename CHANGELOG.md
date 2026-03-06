@@ -33,3 +33,18 @@
 - Introduced swarm-based workflow
 - Implemented telemetry logging
 - Added visualization dashboard
+
+
+------------------------------------
+
+
+
+## v0.4.0- Day 4
+
+Initial Nexus-Core Release
+
+Features:
+- Async risk perception
+- Parallel routing engine
+- Telemetry dashboard
+- Batch throughput measurement
